@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // True if the signed in user owns the parent quiz
+    function quizOwner(quizId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/quizzes/$(quizId)).data.ownerId == request.auth.uid;
+    }
+    function quizOwnerAfter(quizId) {
+      return request.auth != null
+        && getAfter(/databases/$(database)/documents/quizzes/$(quizId)).data.ownerId == request.auth.uid;
+    }
+
+    // True if the signed in user is a member of a team on the quiz
+    function quizPlayer(quizId) {
+      let playerTeam = get(/databases/$(database)/documents/playerTeams/$(request.auth.uid));
+      let team = get(/databases/$(database)/documents/teams/$(playerTeam.data.teamId));
+      return request.auth != null && team.data.quizId == quizId;
+    }
+
+    function authedAndTeamMember(quizId, teamId) {
+      return request.auth != null && teamMember(quizId, teamId, request.auth.uid);
+    }
+
+    function teamMember(quizId, teamId, uid) {
+      let playerTeam = get(/databases/$(database)/documents/playerTeams/$(uid));
+      let team = get(/databases/$(database)/documents/teams/$(playerTeam.data.teamId));
+      return team.data.quizId == quizId && playerTeam.data.teamId == teamId;
+    }
+
+    function teamCaptain(quizId, teamId, uid) {
+      // Need to use getAfter to handle the case when the team and secrets are being created in the
+      // same transaction.
+      let teamData = getAfter(/databases/$(database)/documents/teams/$(teamId)).data;
+      return uid == teamData.captainId && quizId == teamData.quizId;
+    }
+
+    function currentQuestionOrClueVisibleToPlayer(quizId) {
+      return resource.data.isRevealed == true && quizPlayer(quizId);
+    }
+
+    function clueAndQuestionRevealed(quizId, clueId) {
+      let clue = get(/databases/$(database)/documents/quizzes/$(quizId)/clues/$(clueId));
+      let question = get(/databases/$(database)/documents/quizzes/$(quizId)/questions/$(clue.data.questionId));
+      return question.data.isRevealed && clue.data.isRevealed;
+    }
+
+    function answerMatchesClueAndQuestion(quizId, clueId) {
+      let clue = get(/databases/$(database)/documents/quizzes/$(quizId)/clues/$(clueId));
+      return request.resource.data.questionId == clue.data.questionId;
+    }
+
+    match /quizSecrets/{quiz} {
+      allow create: if quizOwnerAfter(quiz) && ('passcode' in request.resource.data);
+      allow read, update, delete: if quizOwner(quiz);
+    }
+
+    match /quizzes/{quiz} {
+      allow create: if quizOwnerAfter(quiz);
+      allow update, delete: if quizOwner(quiz);
+      allow read: if request.auth != null;
+
+      match /questions/{question} {
+        allow create, update, delete: if quizOwner(quiz);
+        allow get, list: if currentQuestionOrClueVisibleToPlayer(quiz) || quizOwner(quiz);
+      }
+
+      match /questionSecrets/{question} {
+        allow read, write: if quizOwner(quiz);
+      }
+
+      match /clues/{clue} {
+        allow create, update, delete: if quizOwner(quiz);
+        allow get, list: if currentQuestionOrClueVisibleToPlayer(quiz) || quizOwner(quiz);
+      }
+
+      match /answers/{answer} {
+        // Only team captains can create answers, and only for revealed questions.
+        // New answers may not have points or be marked.
+        // New answers must be created with the current (server) timestamp.
+        allow create: if request.auth != null &&
+          teamCaptain(quiz, request.resource.data.teamId, request.auth.uid) &&
+          clueAndQuestionRevealed(quiz, request.resource.data.clueId) &&
+          answerMatchesClueAndQuestion(quiz, request.resource.data.clueId) &&
+          !('points' in request.resource.data) &&
+          !('correct' in request.resource.data) &&
+          request.resource.data.submittedAt == request.time;
+        // The quiz owner and anyone on the team can read their answers
+        allow read: if quizOwner(quiz) || authedAndTeamMember(quiz, resource.data.teamId);
+        // The quiz owner can update the answer's awarded points
+        allow update: if quizOwner(quiz) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'correct', 'connections']);
+      }
+
+      match /wallInProgress/{wip} {
+        // Only the team captain can create or update a team's in-progress wall answer
+        // (Excluding sensitive properties, which only cloud functions can write to, and static properties)
+        allow create: if request.auth != null && teamCaptain(quiz, request.resource.data.teamId, request.auth.uid) &&
+          answerMatchesClueAndQuestion(quiz, request.resource.data.clueId) &&
+          !('correctGroups' in request.resource.data) &&
+          !('remainingLives' in request.resource.data);
+        allow update: if request.auth != null && teamCaptain(quiz, resource.data.teamId, request.auth.uid) &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'questionId', 'clueId', 'teamId',
+            'correctGroups', 'remainingLives'
+          ]); 
+        // Anyone on the team can read it
+        allow read: if quizOwner(quiz) || authedAndTeamMember(quiz, resource.data.teamId);
+        // (Nobody can delete, to avoid players deleting after finding some groups and starting again)
+      }
+    }
+
+    match /teamSecrets/{team} {
+      // You need the QUIZ passcode to create a team for this quiz
+      allow create: if request.auth != null &&
+        teamCaptain(request.resource.data.quizId, team, request.auth.uid) &&
+        'passcode' in request.resource.data && 
+        // Passcodes must be same string, or most both be null (/ not provided in request)
+        request.resource.data.get('quizPasscode', null) == get(/databases/$(database)/documents/quizSecrets/$(request.resource.data.quizId)).data.passcode;
+
+      // You need to be the captain to update a team
+      allow update: if request.auth != null && teamCaptain(resource.data.quizId, team, request.auth.uid);
+
+      // Nobody can read the info - it's just for access control
+    }
+
+    match /teams/{team} {
+      // Only team captains can create their team
+      allow create: if request.auth != null &&
+        teamCaptain(request.resource.data.quizId, team, request.auth.uid) &&
+        existsAfter(/databases/$(database)/documents/teamSecrets/$(team)) && // Team secret must be created at same time
+        request.resource.data.points == 0; // Points must start at zero
+
+      // Team captains can update the non-sensitive fields, but only the quiz owner can update points
+      allow update: if request.auth != null && 
+        ((teamCaptain(request.resource.data.quizId, team, request.auth.uid) && !('points' in request.resource.data)) ||
+        quizOwner(resource.data.quizId)
+        );
+
+      // Anyone can read team info
+      allow read: if request.auth != null;
+    }
+
+    match /playerTeams/{player} {
+      // Creating adds you to a team. You need the TEAM passcode to do this.
+      allow create, update: if request.auth != null &&
+        request.auth.uid == player &&
+        // Passcodes must be same string, or most both be null (/ not provided in request)
+        // Need to use getAfter because playerTeam and team may be created in the same transaction
+        request.resource.data.get('teamPasscode', null) == getAfter(/databases/$(database)/documents/teamSecrets/$(request.resource.data.teamId)).data.passcode;
+
+      // You can remove your own player
+      allow delete: if request.auth != null && request.auth.uid == player;
+
+      // You can read your own playerTeams entry, to work out what team you're on
+      allow get: if request.auth != null && request.auth.uid == player;
+    }
+
+    match /userPermissions/{user} {
+      // Read-only access to your own permissions only
+      allow list, write: if false;
+      allow get: if request.auth != null && request.auth.uid == user;
+    }
+  }
+}
