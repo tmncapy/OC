@@ -1,0 +1,20 @@
+.submitAnswerForm {
+    display: flex;
+    flex-direction: row;
+}
+.submitAnswerForm input {
+    flex-grow: 1;
+    margin-right: 0.5em;
+}
+
+.submitWallAnswerForm input,
+.submitWallAnswerForm button {
+    display: block;
+    width: 100%;
+}
+
+.submitWallAnswerForm input + input,
+.submitWallAnswerForm input + button,
+.submitWallAnswerForm button + input {
+  margin-left: inherit;
+}

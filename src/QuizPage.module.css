@@ -1,0 +1,49 @@
+.quizPage {
+    height: 100vh; /* Force everything to fit within the viewport if possible */
+    display: flex;
+    flex-direction: column;
+}
+
+.quizPageContent {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 0; /* min-heigh defaults to auto, setting to 0 allows the context to shrink down & scroll */
+}
+
+.pageTitle {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.editLink {
+    font-size: 0.8rem;
+}
+
+.leftPanel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    margin-right: 2em;
+    min-width: 25em;
+}
+
+.rightPanel {
+    display: flex;
+    flex-direction: column;
+    min-width: 25em;
+    max-height: calc(100vh - 2 * var(--medium)); /* medium padding used by page */
+    max-width: calc((100vh - 2 * var(--medium)) * 0.35); /* 35% of space left after page padding */
+}
+
+.logo {
+    composes: mediumBottonMargin from './layout.module.css';
+}
+
+.answersCard {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+    min-height: 10em; /* Ensure the answers never gets unusably tiny */
+}

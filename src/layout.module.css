@@ -1,0 +1,68 @@
+:root {
+    --large: 6em;
+    --medium: 2em;
+    --small: 1em;
+    --very-small: 0.5em;
+}
+
+.noMarginTop {
+    margin-top: 0;
+}
+
+.largeHorizontalMargin {
+    margin-left: var(--large);
+    margin-right: var(--large);
+}
+
+.mediumTopMargin {
+    margin-top: var(--medium);
+}
+.mediumBottonMargin {
+    margin-bottom: var(--medium);
+}
+
+.wideHorizontalPadding {
+    padding-left: var(--large);
+    padding-right: var(--large);
+}
+
+.mediumTopPadding {
+    padding-top: var(--medium);
+}
+.mediumBottomPadding {
+    padding-bottom: var(--medium);
+}
+.mediumVerticalPadding {
+    composes: mediumTopPadding mediumBottomPadding;
+}
+
+.smallLeftPadding {
+    padding-left: var(--small);
+}
+.smallPadding {
+    padding: var(--small);
+}
+
+.smallTopMargin {
+    margin-top: var(--small);
+}
+
+.verySmallTopMargin {
+    margin-top: var(--very-small);
+}
+.verySmallBottomMargin {
+    margin-bottom: var(--very-small);
+}
+.verySmallLeftMargin {
+    margin-left: var(--very-small);
+}
+
+.verySmallBottomPadding {
+    padding-bottom: var(--very-small);
+}
+.verySmallLeftPadding {
+    padding-left: var(--very-small);
+}
+.verySmallPadding {
+    padding: var(--very-small);
+}
