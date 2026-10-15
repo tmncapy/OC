@@ -1,0 +1,90 @@
+.wallGrid {
+    position: relative;
+    height: calc(5em * 4 + 15px);
+}
+
+.row1 { --row: 0; }
+.row2 { --row: 1; }
+.row3 { --row: 2; }
+.row4 { --row: 3; }
+
+.col1 { --col: 0; }
+.col2 { --col: 1; }
+.col3 { --col: 2; }
+.col4 { --col: 3; }
+
+.wallClue {
+    position: absolute;
+    width: calc((100% - 15px) / 4);
+    height: calc((100% - 15px) / 4);
+    left: calc(var(--col) * (((100% - 15px) / 4) + 5px));
+    top: calc(var(--row) * (((100% - 15px) / 4) + 5px));
+    transition: left 0.6s, top 0.6s;
+    animation: none; /* Override animation set by Clues.module.css */
+}
+
+.ungrouped {
+    animation: rotateAndZoomAnimation 0.2s backwards;
+    animation-delay: calc(((var(--row) + var(--col)) / 6) * 0.5s);
+}
+@keyframes rotateAndZoomAnimation {
+    0% {
+        transform: perspective(1000px) rotateY(85deg) rotateZ(-35deg) scale3d(0.2, 0.2, 1);
+        opacity: 0;
+    }
+    30% {
+        opacity: 1;
+    }
+    85% {
+        transform: perspective(1000px) rotateY(-5deg) rotateZ(0deg) scale3d(1.01, 1.01, 1);
+    }
+    100% {
+        transform: perspective(1000px) rotateY(0deg) rotateZ(0deg) scale3d(1, 1, 1);
+    }
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+/* Set colours used by Clues.module.css */
+.unselected {
+    composes: wallClue;
+}
+.unselected.clickable:hover {
+    --lowlight: var(--light-blue-lowlight);
+    --standard: var(--light-blue);
+    --highlight: var(--light-blue-highlight);
+    --shadow: var(--light-blue-shadow);
+}
+
+.selected {
+    composes: wallClue;
+    composes: midBlueGlassColours from '../../glass.module.css';
+}
+.selected.clickable:hover {
+    --lowlight: var(--mid-blue-darkened-lowlight);
+    --standard: var(--mid-blue-darkened);
+    --highlight: var(--mid-blue-darkened-highlight);
+    --shadow: var(--mid-blue-darkened-shadow);
+}
+
+.group1 {
+    composes: wallClue;
+    composes: veryDarkBlueGlassColours from '../../glass.module.css';
+}
+
+.group2 {
+    composes: wallClue;
+    composes: midGreenGlassColours from '../../glass.module.css';
+}
+
+.group3 {
+    composes: wallClue;
+    composes: darkRedGlassColours from '../../glass.module.css';
+}
+
+.group4 {
+    composes: wallClue;
+    composes: midTurquoiseGlassColours from '../../glass.module.css';
+}

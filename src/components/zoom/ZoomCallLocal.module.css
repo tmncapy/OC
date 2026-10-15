@@ -1,0 +1,10 @@
+.selfVideo {
+    transform: scale(-1, 1);
+    width: 100%;
+    height: auto;
+}
+
+.deviceList {
+    width: 100%;
+    margin-bottom: var(--very-small);
+}

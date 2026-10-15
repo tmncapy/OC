@@ -1,0 +1,34 @@
+.logoWrapper {
+    display: flex;
+    justify-content: right;
+}
+
+.logoText {
+    font-family: 'Zilla Slab', 'American Typewriter', Georgia, serif;
+    letter-spacing: 0.03em;
+    margin-top: 0;
+    line-height: 0.8em;
+    margin-left: 0.2em;
+}
+
+.onlyne {
+    color: var(--mid-turquoise-lowlight);
+}
+
+.ne {
+    font-family: 'Schoolbell', 'Bradley Hand', sans-serif;
+}
+
+.connect {
+    color: var(--mid-green);
+}
+
+.logoSvg {
+    width: calc(0.8em * 2); /* 2 line heights of the logoText */
+    height: calc(0.8em * 2); /* 2 line heights of the logoText */
+}
+
+.logoLink {
+    text-decoration: none;
+    font-size: 1.2em;
+}
